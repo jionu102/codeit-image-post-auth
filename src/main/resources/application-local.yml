@@ -26,3 +26,4 @@ server:
       timeout: 1m
       cookie:
         max-age: 1m
+      tracking-modes: cookie

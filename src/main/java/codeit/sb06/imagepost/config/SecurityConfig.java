@@ -4,6 +4,7 @@ import codeit.sb06.imagepost.entity.Member;
 import codeit.sb06.imagepost.entity.Role;
 import codeit.sb06.imagepost.repository.MemberRepository;
 import codeit.sb06.imagepost.security.ApiInvalidSessionStrategy;
+import codeit.sb06.imagepost.security.ApiSessionExpiredStrategy;
 import codeit.sb06.imagepost.security.RestAuthenticationFailureHandler;
 import codeit.sb06.imagepost.security.RestAuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -44,13 +45,17 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         // 2. [신규] 유효하지 않은 세션(만료 등) 접근 시 처리 전략
                         .invalidSessionStrategy(new ApiInvalidSessionStrategy())
-                        // 3. 동시 세션 제어
+                        // [Step 3-1] 세션 고정 보호 (신규 추가)
+                        // 로그인 시 기존 세션 ID를 버리고 새로운 ID 발급
+                        .sessionFixation(fixation -> fixation.changeSessionId())
+                        // [Step 3-2] 동시 세션 제어 고도화 (수정)
                         .sessionConcurrency(concurrency -> concurrency
-                                .maximumSessions(1)                 // 최대 허용 세션 1개
-                                .maxSessionsPreventsLogin(false)    // false: 기존 세션 만료(밀어내기)
-                                .expiredUrl("/app/login?expired")   // 세션 만료 시 이동 URL
-                                .sessionRegistry(sessionRegistry()) // 레지스트리 등록
-
+                                .maximumSessions(1)
+                                .maxSessionsPreventsLogin(false)
+                                .sessionRegistry(sessionRegistry())
+                                // 기존: .expiredUrl("/app/login?expired")  <-- 삭제
+                                // 변경: API 전용 핸들러 등록
+                                .expiredSessionStrategy(new ApiSessionExpiredStrategy())
                         )
                 )
                 .logout(logout -> logout
