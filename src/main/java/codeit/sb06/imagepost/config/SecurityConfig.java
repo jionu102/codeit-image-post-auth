@@ -3,6 +3,7 @@ package codeit.sb06.imagepost.config;
 import codeit.sb06.imagepost.entity.Member;
 import codeit.sb06.imagepost.entity.Role;
 import codeit.sb06.imagepost.repository.MemberRepository;
+import codeit.sb06.imagepost.security.ApiInvalidSessionStrategy;
 import codeit.sb06.imagepost.security.RestAuthenticationFailureHandler;
 import codeit.sb06.imagepost.security.RestAuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -36,12 +38,20 @@ public class SecurityConfig {
                         .failureHandler(new RestAuthenticationFailureHandler())
                         .permitAll()
                 )
-                // [추가] 세션 관리 정책 설정
+                // 세션 관리 정책 고도화
                 .sessionManagement(session -> session
-                        .maximumSessions(1)                 // 최대 허용 세션 1개
-                        .maxSessionsPreventsLogin(false)    // false: 기존 세션 만료 (밀어내기), true: 신규 로그인 차단
-                        .expiredUrl("/app/login?expired")   // 세션 만료 시 이동할 URL (API 환경에서는 핸들러 처리가 더 적합할 수 있음)
-                        .sessionRegistry(sessionRegistry())
+                        // 1. 세션 생성 정책: 필요 시 생성 (기본값이나 명시적으로 설정)
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        // 2. [신규] 유효하지 않은 세션(만료 등) 접근 시 처리 전략
+                        .invalidSessionStrategy(new ApiInvalidSessionStrategy())
+                        // 3. 동시 세션 제어
+                        .sessionConcurrency(concurrency -> concurrency
+                                .maximumSessions(1)                 // 최대 허용 세션 1개
+                                .maxSessionsPreventsLogin(false)    // false: 기존 세션 만료(밀어내기)
+                                .expiredUrl("/app/login?expired")   // 세션 만료 시 이동 URL
+                                .sessionRegistry(sessionRegistry()) // 레지스트리 등록
+
+                        )
                 )
                 .logout(logout -> logout
                         .logoutUrl("/api/logout")

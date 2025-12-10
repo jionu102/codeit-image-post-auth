@@ -11,7 +11,6 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import java.io.IOException;
 import java.util.Map;
 
-// ... import 생략
 public class RestAuthenticationFailureHandler implements AuthenticationFailureHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
