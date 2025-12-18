@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   app:
-    image: image-post:latest
+    image: security:test #image-post:latest
     container_name: image-post
     ports:
       - "8080:8080"

@@ -23,17 +23,15 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String author;
+    @JoinColumn(name = "author", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Member author;
 
     @Column(nullable = false, length = 50)
     private String title;
 
     @Column(nullable = false, length = 1000)
     private String content;
-
-    @Column(nullable = false)
-    private String password;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "post_tags", joinColumns = @JoinColumn(name = "post_id"))
@@ -54,11 +52,10 @@ public class Post {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Post(String author, String title, String content, String password, List<String> tags) {
+    public Post(Member author, String title, String content, List<String> tags) {
         this.author = author;
         this.title = title;
         this.content = content;
-        this.password = password;
         this.tags = tags;
     }
 

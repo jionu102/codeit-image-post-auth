@@ -5,14 +5,19 @@ import codeit.sb06.imagepost.dto.request.PostCreateRequest;
 import codeit.sb06.imagepost.dto.request.PostUpdateRequest;
 import codeit.sb06.imagepost.dto.response.PostImageResponse;
 import codeit.sb06.imagepost.dto.response.PostResponse;
+import codeit.sb06.imagepost.entity.Member;
 import codeit.sb06.imagepost.entity.Post;
 import codeit.sb06.imagepost.entity.PostImage;
 import codeit.sb06.imagepost.exception.ErrorCode;
 import codeit.sb06.imagepost.exception.FileUploadException;
 import codeit.sb06.imagepost.exception.InvalidPasswordException;
 import codeit.sb06.imagepost.exception.PostNotFoundException;
+import codeit.sb06.imagepost.repository.MemberRepository;
 import codeit.sb06.imagepost.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,7 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
-
+    private final MemberRepository memberRepository;
     private final PostRepository postRepository;
     private final FileStorageService fileStorageService; // 인터페이스에 의존
     private static final int MAX_IMAGE_COUNT = 5;
@@ -34,11 +39,21 @@ public class PostService {
     public PostResponse savePost(PostCreateRequest request, List<MultipartFile> images) {
         validateImageCount(images);
 
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Member author = memberRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
+
+
         // 1. 파일 스토리지에 저장 (local 또는 dev 프로필 구현체가 실행됨)
         List<FileMetaData> storedFiles = fileStorageService.storeFiles(images);
 
         // 2. Post 엔티티 생성
-        Post post = request.toEntity();
+        Post post = Post.builder()
+                .author(author)
+                .title(request.title())
+                .content(request.content())
+                .tags(request.tags())
+                .build();
 
         // 3. PostImage 엔티티 리스트 생성
         List<PostImage> postImages = storedFiles.stream()
@@ -57,11 +72,11 @@ public class PostService {
     }
 
     @Transactional
+    @PreAuthorize("hasPermission(#id, 'Post', 'UPDATE')")
     public PostResponse updatePost(Long id, PostUpdateRequest request, List<MultipartFile> images) {
         validateImageCount(images);
 
         Post post = findPostById(id);
-        verifyPassword(post, request.password());
 
         // 1. 기존 스토리지 파일 삭제
         List<String> oldStorageUrls = post.getImages().stream()
@@ -92,9 +107,9 @@ public class PostService {
     }
 
     @Transactional
-    public void deletePost(Long id, String password) {
+    @PreAuthorize("hasPermission(#id, 'Post', 'DELETE')")
+    public void deletePost(Long id) {
         Post post = findPostById(id);
-        verifyPassword(post, password);
 
         // 1. 스토리지의 실제 파일 먼저 삭제
         List<String> storageUrls = post.getImages().stream()
@@ -123,13 +138,6 @@ public class PostService {
                 .orElseThrow(() -> new PostNotFoundException("게시글을 찾을 수 없습니다. ID: " + id));
     }
 
-
-    private void verifyPassword(Post post, String providedPassword) {
-        if (!post.getPassword().equals(providedPassword)) {
-            throw new InvalidPasswordException("비밀번호가 일치하지 않습니다.");
-        }
-    }
-
     // 이미지 개수 검증
     private void validateImageCount(List<MultipartFile> images) {
         if (images != null && images.size() > MAX_IMAGE_COUNT) {
@@ -155,7 +163,7 @@ public class PostService {
 
         return PostResponse.builder()
                 .id(post.getId())
-                .author(post.getAuthor())
+                .author(post.getAuthor().getUsername())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .tags(post.getTags())

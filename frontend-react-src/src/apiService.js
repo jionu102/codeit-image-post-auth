@@ -74,9 +74,31 @@ export const updatePost = (id, postData) => {
 };
 
 // 게시글 삭제 (PostDeleteRequest DTO 전송)
-export const deletePost = (id, password) => {
-    return apiClient.delete(`/${id}`, {
-        // Spring의 @RequestBody로 받기 위해 'data' 필드에 DTO를 넣어 전송
-        data: { password: password }
+export const deletePost = (id) => {
+    return apiClient.delete(`/${id}`);
+};
+
+export const loginUser = (username, password, rememberMe = false) => {
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('password', password);
+
+    // [Step 3-2] 체크박스 값에 따라 파라미터 추가
+    // Spring Security 기본 파라미터명이 'remember-me'임
+    if (rememberMe) {
+        params.append('remember-me', 'true');
+    }
+
+    return apiClient.post('/login', params, {
+        baseURL: '/api',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    });
+};
+
+export const logoutUser = () => {
+    return apiClient.post('/logout', {}, {
+        baseURL: '/api'
     });
 };

@@ -4,8 +4,6 @@ import { createPost, getPostById, updatePost } from '../apiService';
 
 function PostForm() {
     const [formData, setFormData] = useState({
-        author: '',
-        password: '',
         title: '',
         content: '',
         tags: '',
@@ -26,8 +24,6 @@ function PostForm() {
                     const response = await getPostById(id);
                     const post = response.data;
                     setFormData({
-                        author: post.author, // 작성자는 UI에서 disabled
-                        password: '', // 비밀번호는 항상 새로 입력
                         title: post.title,
                         content: post.content,
                         tags: post.tags.join(', '), // 배열을 콤마로 구분된 문자열로
@@ -97,27 +93,6 @@ function PostForm() {
         <form onSubmit={handleSubmit} className="post-form">
             <h2>{isEditMode ? '게시글 수정' : '새 글 작성'}</h2>
             {error && <div className="error-msg">{error}</div>}
-
-            <input
-                type="text"
-                name="author"
-                value={formData.author}
-                onChange={handleChange}
-                placeholder="작성자"
-                required
-                disabled={isEditMode} // 수정 모드에서는 작성자 변경 불가
-            />
-
-            <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder={isEditMode ? "수정/삭제용 비밀번호 (6자리 숫자)" : "비밀번호 (6자리 숫자)"}
-                required
-                pattern="\d{6}"
-                title="비밀번호는 6자리 숫자여야 합니다."
-            />
 
             <input
                 type="text"

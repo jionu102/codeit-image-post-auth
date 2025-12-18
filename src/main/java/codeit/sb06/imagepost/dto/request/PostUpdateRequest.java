@@ -9,9 +9,6 @@ import java.util.List;
 
 @Builder
 public record PostUpdateRequest(
-        @NotBlank(message = "비밀번호는 필수입니다.")
-        String password,
-
         @ValidTitle
         String title,
 

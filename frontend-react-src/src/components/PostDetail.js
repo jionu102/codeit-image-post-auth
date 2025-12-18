@@ -27,20 +27,21 @@ function PostDetail() {
     }, [id]);
 
     const handleDelete = async () => {
-        const password = prompt("삭제하려면 비밀번호(6자리 숫자)를 입력하세요.");
-        if (!password) {
+        if (!window.confirm("정말로 삭제하시겠습니까?")) {
             return;
         }
-
         try {
-            await deletePost(id, password);
+            await deletePost(id);
             alert('게시글이 삭제되었습니다.');
-            navigate('/'); // 목록으로 이동
+            navigate('/');
         } catch (err) {
-            // 백엔드 ErrorResponse 메시지 (예: "비밀번호가 일치하지 않습니다.")
-            const errorMsg = err.response?.data?.message || '삭제 중 오류가 발생했습니다.';
-            alert(errorMsg); // alert로 에러 표시
-            console.error(err);
+            // [Step 6-3] 403 Forbidden 에러 핸들링 (권한 부족 시)
+            if (err.response && err.response.status === 403) {
+                alert("삭제 권한이 없습니다 (본인 글만 삭제 가능).");
+            } else {
+                console.error("삭제 실패", error);
+                alert("삭제 중 오류가 발생했습니다.");
+            }
         }
     };
 

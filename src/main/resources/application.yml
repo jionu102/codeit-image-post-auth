@@ -28,3 +28,11 @@ management:
     web:
       exposure:
         include: health
+
+server:
+  servlet:
+    session:
+      timeout: 1m  # 테스트용 1m초 (실무 권장: 30m)
+      cookie:
+        max-age: 1m # 쿠키 수명도 동일하게 맞춤 (선택사항)
+      tracking-modes: cookie
