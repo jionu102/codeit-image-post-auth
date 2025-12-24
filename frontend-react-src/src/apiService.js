@@ -23,12 +23,25 @@ apiClient.interceptors.request.use(
 // 3. 응답 인터셉터: 401 발생 시 처리
 apiClient.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response && error.response.status === 401) {
-            if (accessToken) {
-                alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-                accessToken = null;
+    async (error) => {
+        const originalRequest = error.config;
+        // 401 발생 시 토큰 갱신 시도
+        if (error.response && error.response.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+                const res = await axios.post('/api/auth/refresh', {}, {
+                    baseURL: '/api', withCredentials: true
+                });
+
+                setAccessToken(res.data.accessToken);
+                originalRequest.headers['Authorization'] = `Bearer ${res.data.accessToken}`;
+                return apiClient(originalRequest);
+            } catch (err) {
+                // 갱신 실패 시 로그아웃
+                setAccessToken(null);
+                localStorage.removeItem('isLoggedIn');
                 window.location.href = '/login';
+                return Promise.reject(err);
             }
         }
         return Promise.reject(error);

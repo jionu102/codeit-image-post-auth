@@ -1,4 +1,4 @@
-package codeit.sb06.imagepost.security.jwt;
+package codeit.sb06.imagepost.config;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
-    private String secret;
-    private long expiration;
     private String issuer;
+    private String secret;
+    private long accessTokenValidityInMs;
+    private long refreshTokenValidityInMs;
 }

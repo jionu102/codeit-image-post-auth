@@ -6,6 +6,7 @@ import codeit.sb06.imagepost.repository.MemberRepository;
 import codeit.sb06.imagepost.security.JwtLoginSuccessHandler;
 import codeit.sb06.imagepost.security.RestAuthenticationFailureHandler;
 import codeit.sb06.imagepost.security.jwt.JwtAuthenticationFilter;
+import codeit.sb06.imagepost.security.jwt.JwtLogoutHandler;
 import codeit.sb06.imagepost.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -28,6 +29,7 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtLoginSuccessHandler jwtLoginSuccessHandler;
+    private final JwtLogoutHandler jwtLogoutHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -49,6 +51,10 @@ public class SecurityConfig {
                         .successHandler(jwtLoginSuccessHandler)
                         .failureHandler(new RestAuthenticationFailureHandler())
                         .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/api/logout")
+                        .addLogoutHandler(jwtLogoutHandler)
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 

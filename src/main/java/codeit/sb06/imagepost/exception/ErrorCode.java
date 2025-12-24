@@ -6,9 +6,11 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
+    // Auth
+    INVALID_AUTH(HttpStatus.UNAUTHORIZED, "A001", "잘못된 인증 정보입니다."),
+
     // Post
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "게시글을 찾을 수 없습니다."),
-    INVALID_PASSWORD(HttpStatus.FORBIDDEN, "P002", "비밀번호가 일치하지 않습니다."),
 
     // File
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 업로드에 실패했습니다."),

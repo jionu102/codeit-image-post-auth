@@ -4,7 +4,10 @@ import codeit.sb06.imagepost.dto.JwtDto;
 import codeit.sb06.imagepost.dto.UserDto;
 import codeit.sb06.imagepost.entity.Member;
 import codeit.sb06.imagepost.repository.MemberRepository;
+import codeit.sb06.imagepost.security.jwt.JwtInformation;
+import codeit.sb06.imagepost.security.jwt.JwtRegistry;
 import codeit.sb06.imagepost.security.jwt.JwtTokenProvider;
+import codeit.sb06.imagepost.security.jwt.TokenUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +29,7 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final MemberRepository memberRepository;
+    private final JwtRegistry jwtRegistry;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -38,19 +42,18 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
         // 2. 토큰 생성
         // Access Token: 유효기간 짧음 (예: 1시간)
         // Refresh Token: 유효기간 긺 (예: 2주), Access Token 재발급용
-        String accessToken = jwtTokenProvider.generateToken(member.getUsername(), member.getRole().name());
-        String refreshToken = jwtTokenProvider.generateToken(member.getUsername(), member.getRole().name()); // 편의상 동일 로직 사용, 실무에선 만료시간 다르게 설정 권장
+        String accessToken = jwtTokenProvider.createAccessToken(member.getUsername(), member.getRole().name());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getUsername(), member.getRole().name());
 
-        // 3. Refresh Token을 쿠키에 저장
-        Cookie refreshCookie = new Cookie("REFRESH_TOKEN", refreshToken);
-        refreshCookie.setHttpOnly(true); // JS에서 접근 불가
-        refreshCookie.setPath("/");      // 모든 경로에서 전송
-        refreshCookie.setMaxAge(60 * 60 * 24 * 14); // 2주
-        // refreshCookie.setSecure(true); // HTTPS 적용 시 필수 해제
+        // 3. Registry 등록
+        JwtInformation jwtInfo = new JwtInformation(UserDto.from(member), accessToken, refreshToken);
+        jwtRegistry.registerJwtInformation(jwtInfo);
 
+        // 4. Refresh Token을 쿠키에 저장
+        Cookie refreshCookie = TokenUtil.createRefreshTokenCookie(refreshToken);
         response.addCookie(refreshCookie);
 
-        // 4. 응답 작성 (Access Token + User Info)
+        // 5. 응답 작성 (Access Token + User Info)
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());

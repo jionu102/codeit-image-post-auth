@@ -1,5 +1,6 @@
 package codeit.sb06.imagepost.security.jwt;
 
+import codeit.sb06.imagepost.config.JwtProperties;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -33,10 +34,20 @@ public class JwtTokenProvider {
         }
     }
 
-    public String generateToken(String username, String role) {
+    // 1. Access Token 생성 (30분)
+    public String createAccessToken(String username, String role) {
+        return generateToken(username, role, jwtProperties.getAccessTokenValidityInMs());
+    }
+
+    // 2. Refresh Token 생성 (14일)
+    public String createRefreshToken(String username, String role) {
+        return generateToken(username, role, jwtProperties.getRefreshTokenValidityInMs());
+    }
+
+    public String generateToken(String username, String role, long validityInMs) {
         try {
             Date now = new Date();
-            Date expirationTime = new Date(now.getTime() + jwtProperties.getExpiration());
+            Date expirationTime = new Date(now.getTime() + validityInMs);
 
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                     .issuer(jwtProperties.getIssuer())

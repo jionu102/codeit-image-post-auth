@@ -18,14 +18,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, errorCode.getStatus());
     }
 
-    @ExceptionHandler(InvalidPasswordException.class)
-    protected ResponseEntity<ErrorResponse> handleInvalidPasswordException(InvalidPasswordException e) {
-        log.error("handleInvalidPasswordException", e);
-        final ErrorCode errorCode = ErrorCode.INVALID_PASSWORD;
-        final ErrorResponse response = ErrorResponse.of(errorCode);
-        return new ResponseEntity<>(response, errorCode.getStatus());
-    }
-
     // FileUploadException 핸들러
     @ExceptionHandler(FileUploadException.class)
     protected ResponseEntity<ErrorResponse> handleFileUploadException(FileUploadException e) {
@@ -44,6 +36,14 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.error("handleMethodArgumentNotValidException", e);
         final ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        final ErrorResponse response = ErrorResponse.of(errorCode);
+        return new ResponseEntity<>(response, errorCode.getStatus());
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    protected ResponseEntity<ErrorResponse> handleInvalidRefreshTokenException(InvalidRefreshTokenException e) {
+        log.error("handleInvalidRefreshTokenException", e);
+        final ErrorCode errorCode = ErrorCode.INVALID_AUTH;
         final ErrorResponse response = ErrorResponse.of(errorCode);
         return new ResponseEntity<>(response, errorCode.getStatus());
     }
