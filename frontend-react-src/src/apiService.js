@@ -1,114 +1,109 @@
 import axios from 'axios';
 
-// create-react-app의 proxy 설정을 사용하므로 상대 경로로 API 호출
-// (빌드 후에는 Spring Boot 서버의 /api/posts로 요청됨)
+// 1. 토큰 변수 추가
+let accessToken = null;
+
 const API_URL = '/api/posts';
 
 const apiClient = axios.create({
     baseURL: API_URL,
 });
 
-// 모든 게시글 조회
-export const getAllPosts = () => apiClient.get('');
-
-// 특정 게시글 조회
-export const getPostById = (id) => apiClient.get(`/${id}`);
-
-// 게시글 생성 (FormData 사용)
-export const createPost = (postData) => {
-    const formData = new FormData();
-
-    // 1. JSON DTO를 'request' 파트로 추가 (Blob 사용)
-    const postRequestDto = {
-        title: postData.title,
-        content: postData.content,
-        tags: postData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-    };
-    formData.append('request', new Blob([JSON.stringify(postRequestDto)], {
-        type: "application/json"
-    }));
-
-    // 2. 이미지 파일(FileList)을 'images' 파트로 추가
-    if (postData.images) { // postData.images는 FileList 객체
-        for (let i = 0; i < postData.images.length; i++) {
-            formData.append('images', postData.images[i]);
+// 2. 요청 인터셉터: 토큰이 있으면 헤더에 추가
+apiClient.interceptors.request.use(
+    (config) => {
+        if (accessToken) {
+            config.headers['Authorization'] = `Bearer ${accessToken}`;
         }
-    }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
-    return apiClient.post('', formData, {
-        headers: {
-            // Content-Type은 axios가 FormData를 감지하여 자동으로 'multipart/form-data'로 설정함
-        },
-    });
-};
-
-// 게시글 수정 (createPost와 동일한 FormData 방식)
-export const updatePost = (id, postData) => {
-    const formData = new FormData();
-
-    // 1. JSON DTO ('request' 파트)
-    const postUpdateDto = {
-        title: postData.title,
-        content: postData.content,
-        tags: postData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-    };
-    formData.append('request', new Blob([JSON.stringify(postUpdateDto)], {
-        type: "application/json"
-    }));
-
-    // 2. 이미지 파일 ('images' 파트)
-    if (postData.images) {
-        for (let i = 0; i < postData.images.length; i++) {
-            formData.append('images', postData.images[i]);
-        }
-    }
-
-    return apiClient.put(`/${id}`, formData, {
-        headers: {
-            // 'Content-Type': 'multipart/form-data' (자동 설정)
-        },
-    });
-};
-
-// 게시글 삭제 (PostDeleteRequest DTO 전송)
-export const deletePost = (id) => {
-    return apiClient.delete(`/${id}`);
-};
-
+// 3. 응답 인터셉터: 401 발생 시 처리
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            // 401 에러 발생 시 localStorage 비우고 페이지 리로드(또는 홈 이동)
-            if (localStorage.getItem('isLoggedIn') === 'true') {
+            if (accessToken) {
                 alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-                localStorage.removeItem('isLoggedIn');
-                window.location.href = '/login'; // 강제 이동
+                accessToken = null;
+                window.location.href = '/login';
             }
         }
         return Promise.reject(error);
     }
 );
 
-export const loginUser = (username, password, rememberMe = false) => {
+// [New] 외부에서 토큰 설정용 함수
+export const setAccessToken = (token) => {
+    accessToken = token;
+};
+
+// --- 기존 API 함수들 (변경 없음) ---
+
+export const getAllPosts = () => apiClient.get('');
+export const getPostById = (id) => apiClient.get(`/${id}`);
+
+export const createPost = (postData) => {
+    const formData = new FormData();
+    const postRequestDto = {
+        title: postData.title,
+        content: postData.content,
+        tags: postData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+    };
+    formData.append('request', new Blob([JSON.stringify(postRequestDto)], { type: "application/json" }));
+
+    if (postData.images) {
+        for (let i = 0; i < postData.images.length; i++) {
+            formData.append('images', postData.images[i]);
+        }
+    }
+    return apiClient.post('', formData);
+};
+
+export const updatePost = (id, postData) => {
+    const formData = new FormData();
+    const postUpdateDto = {
+        title: postData.title,
+        content: postData.content,
+        tags: postData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+    };
+    formData.append('request', new Blob([JSON.stringify(postUpdateDto)], { type: "application/json" }));
+
+    if (postData.images) {
+        for (let i = 0; i < postData.images.length; i++) {
+            formData.append('images', postData.images[i]);
+        }
+    }
+    return apiClient.put(`/${id}`, formData);
+};
+
+export const deletePost = (id) => apiClient.delete(`/${id}`);
+
+// --- 인증 관련 함수 수정 (JWT 처리) ---
+
+export const loginUser = async (username, password) => {
     const params = new URLSearchParams();
     params.append('username', username);
     params.append('password', password);
 
-    if (rememberMe) {
-        params.append('remember-me', 'true');
-    }
-
-    return apiClient.post('/login', params, {
+    // [Mod] baseURL 오버라이드 및 토큰 저장 로직 추가
+    const response = await apiClient.post('/login', params, {
         baseURL: '/api',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
+
+    if (response.data.accessToken) {
+        setAccessToken(response.data.accessToken);
+    }
+    return response.data;
 };
 
-export const logoutUser = () => {
-    return apiClient.post('/logout', {}, {
-        baseURL: '/api'
-    });
+export const logoutUser = async () => {
+    try {
+        await apiClient.post('/logout', {}, { baseURL: '/api' });
+    } finally {
+        setAccessToken(null);
+    }
 };

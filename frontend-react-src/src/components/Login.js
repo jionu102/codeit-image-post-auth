@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../apiService';
 
-function Login({ setIsLoggedIn }) { // Props로 상태 변경 함수 수신
+function Login({ setIsLoggedIn }) { // 기존 Props 유지
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState(null);
@@ -19,22 +19,35 @@ function Login({ setIsLoggedIn }) { // Props로 상태 변경 함수 수신
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null); // 에러 상태 초기화
+
         try {
-            const response = await loginUser(
+            // [수정] apiService.loginUser는 이제 response.data를 직접 반환합니다.
+            const data = await loginUser(
                 credentials.username,
-                credentials.password,
-                rememberMe
+                credentials.password
+                // rememberMe는 JWT 흐름에서 Refresh Token 쿠키로 대체되므로 무시되거나, 백엔드 로직에 따라 처리됨
             );
 
-            if (response.status === 200) {
+            // [수정] accessToken이 응답에 포함되어 있다면 로그인 성공으로 간주
+            if (data.accessToken) {
                 alert('로그인 성공!');
+
+                // UI 상태 유지를 위한 localStorage 사용 (기존 로직 존중)
+                // *주의: 실제 토큰은 apiService 변수에 저장되지만, 새로고침 시 UI 상태 복구를 위해 이는 유지합니다.
                 localStorage.setItem('isLoggedIn', 'true');
+
                 setIsLoggedIn(true);
                 navigate('/');
             }
         } catch (err) {
             console.error(err);
-            setError('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
+            // 에러 메시지 처리
+            if (err.response && err.response.status === 401) {
+                setError('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
+            } else {
+                setError('로그인 중 오류가 발생했습니다.');
+            }
         }
     };
 

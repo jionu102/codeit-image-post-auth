@@ -7,6 +7,7 @@ import Login from './components/Login';
 import { logoutUser } from './apiService';
 
 function App() {
+    // 기존 로직 유지: localStorage를 통해 초기 로그인 상태 확인
     const [isLoggedIn, setIsLoggedIn] = useState(() => {
         return localStorage.getItem('isLoggedIn') === 'true';
     });
@@ -15,15 +16,15 @@ function App() {
 
     const handleLogout = async () => {
         try {
-            await logoutUser();
+            await logoutUser(); // 백엔드 쿠키 삭제 요청
+        } catch (error) {
+            console.error('Logout failed', error);
+        } finally {
+            // [수정] 로그아웃 성공/실패 여부와 관계없이 클라이언트 상태 초기화
             localStorage.removeItem('isLoggedIn');
             setIsLoggedIn(false);
             alert('로그아웃 되었습니다.');
             navigate('/');
-        } catch (error) {
-            console.error('Logout failed', error);
-            localStorage.removeItem('isLoggedIn');
-            setIsLoggedIn(false);
         }
     };
 
